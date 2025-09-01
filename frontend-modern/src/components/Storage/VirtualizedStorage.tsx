@@ -142,11 +142,6 @@ export const VirtualizedStorage: Component<VirtualizedStorageProps> = (props) =>
                           const isDisabled = storage.status !== 'available';
                           
                           const alertStyles = getAlertStyles(storage.id || `${storage.instance}-${storage.name}`, props.activeAlerts);
-                          const alertBg = alertStyles.hasAlert 
-                            ? (alertStyles.severity === 'critical' 
-                              ? 'bg-red-50 dark:bg-red-950/30' 
-                              : 'bg-yellow-50 dark:bg-yellow-950/20')
-                            : '';
                           
                           const firstCellClass = alertStyles.hasAlert
                             ? (alertStyles.severity === 'critical'
@@ -155,7 +150,7 @@ export const VirtualizedStorage: Component<VirtualizedStorageProps> = (props) =>
                             : '';
                           
                           return (
-                            <div class={`flex items-center h-full w-full border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors ${isDisabled ? 'opacity-60' : ''} ${alertBg}`}>
+                            <div class={`flex items-center h-8 w-full border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors ${isDisabled ? 'opacity-60' : ''} ${alertStyles.rowClass || ''}`}>
                               <div class={`p-0.5 px-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 w-[200px] flex-shrink-0 flex items-center ${firstCellClass}`}>
                                 {storage.name}
                               </div>

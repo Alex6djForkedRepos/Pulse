@@ -173,7 +173,7 @@ export const NodeSummaryTable: Component<NodeSummaryTableProps> = (props) => {
                 
                 return (
                   <tr 
-                    class={`cursor-pointer transition-all duration-200 ${
+                    class={`h-8 cursor-pointer transition-all duration-200 ${
                       isSelected() 
                         ? 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 relative z-10' 
                         : props.selectedNode 
@@ -187,7 +187,7 @@ export const NodeSummaryTable: Component<NodeSummaryTableProps> = (props) => {
                     }}
                     onClick={() => props.onNodeClick(nodeId, item.type)}
                   >
-                    <td class="px-2 py-0.5 whitespace-nowrap">
+                    <td class="px-2 py-0.5 whitespace-nowrap align-middle">
                       <div class="flex items-center gap-1">
                         <a 
                           href={isPVE ? (node!.host || `https://${node!.name}:8006`) : (pbs!.host || `https://${pbs!.name}:8007`)}
@@ -228,7 +228,7 @@ export const NodeSummaryTable: Component<NodeSummaryTableProps> = (props) => {
                         </Show>
                       </div>
                     </td>
-                    <td class="px-2 py-0.5 whitespace-nowrap">
+                    <td class="px-2 py-0.5 whitespace-nowrap align-middle">
                       <div class="flex items-center gap-1">
                         <span class={`h-2 w-2 flex-shrink-0 rounded-full ${
                           isOnline() ? 'bg-green-500' : 'bg-red-500'
@@ -238,7 +238,7 @@ export const NodeSummaryTable: Component<NodeSummaryTableProps> = (props) => {
                         </span>
                       </div>
                     </td>
-                    <td class="px-2 py-0.5 whitespace-nowrap">
+                    <td class="px-2 py-0.5 whitespace-nowrap align-middle">
                       <span class={`text-xs ${
                         isPVE && node!.uptime < 3600 ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
                       }`}>
@@ -247,7 +247,7 @@ export const NodeSummaryTable: Component<NodeSummaryTableProps> = (props) => {
                         </Show>
                       </span>
                     </td>
-                    <td class="px-2 py-0.5">
+                    <td class="px-2 py-0.5 align-middle">
                       <MetricBar 
                         value={cpuPercent()} 
                         label={`${cpuPercent()}%`}
@@ -255,7 +255,7 @@ export const NodeSummaryTable: Component<NodeSummaryTableProps> = (props) => {
                         type="cpu"
                       />
                     </td>
-                    <td class="px-2 py-0.5">
+                    <td class="px-2 py-0.5 align-middle">
                       <MetricBar 
                         value={memPercent()} 
                         label={`${memPercent()}%`}
@@ -267,7 +267,7 @@ export const NodeSummaryTable: Component<NodeSummaryTableProps> = (props) => {
                         type="memory"
                       />
                     </td>
-                    <td class="px-2 py-0.5">
+                    <td class="px-2 py-0.5 align-middle">
                       <MetricBar 
                         value={diskPercent()} 
                         label={`${diskPercent()}%`}
@@ -277,7 +277,7 @@ export const NodeSummaryTable: Component<NodeSummaryTableProps> = (props) => {
                     </td>
                     <For each={getNodeCounts(item)}>
                       {(count) => (
-                        <td class="px-2 py-0.5 whitespace-nowrap text-center">
+                        <td class="px-2 py-0.5 whitespace-nowrap text-center align-middle">
                           <span class="text-xs text-gray-700 dark:text-gray-300">{count}</span>
                         </td>
                       )}

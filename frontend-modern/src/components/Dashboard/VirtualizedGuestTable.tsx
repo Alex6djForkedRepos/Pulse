@@ -173,9 +173,9 @@ export const VirtualizedGuestTable: Component<VirtualizedGuestTableProps> = (pro
                             const isRunning = guest.status === 'running';
                             
                             return (
-                              <div class={`flex min-w-[1200px] border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${alertStyles?.rowClass || ''}`}>
+                              <div class={`flex min-w-[1200px] h-8 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${alertStyles?.rowClass || ''}`}>
                                 {/* Name */}
-                                <div class={`p-1 px-2 ${cols.name} flex items-center gap-2`}>
+                                <div class={`p-1 px-2 ${cols.name} flex items-center gap-2 h-full`}>
                                   <Show when={alertStyles?.hasAlert}>
                                     <span class={`h-2 w-2 rounded-full flex-shrink-0 ${alertStyles?.indicatorClass || ''}`} />
                                   </Show>
@@ -188,7 +188,7 @@ export const VirtualizedGuestTable: Component<VirtualizedGuestTableProps> = (pro
                                 </div>
                                 
                                 {/* Type */}
-                                <div class={`p-1 px-2 ${cols.type}`}>
+                                <div class={`p-1 px-2 ${cols.type} flex items-center h-full`}>
                                   <span class={`text-[10px] px-1 py-0 rounded ${
                                     guest.type === 'qemu' 
                                       ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
@@ -199,19 +199,19 @@ export const VirtualizedGuestTable: Component<VirtualizedGuestTableProps> = (pro
                                 </div>
                                 
                                 {/* VMID */}
-                                <div class={`p-1 px-2 ${cols.vmid}`}>
+                                <div class={`p-1 px-2 ${cols.vmid} flex items-center h-full`}>
                                   <span class="text-xs text-gray-600 dark:text-gray-400">{guest.vmid}</span>
                                 </div>
                                 
                                 {/* Uptime */}
-                                <div class={`p-1 px-2 ${cols.uptime}`}>
+                                <div class={`p-1 px-2 ${cols.uptime} flex items-center h-full`}>
                                   <span class="text-xs text-gray-600 dark:text-gray-400">
                                     {isRunning && guest.uptime ? formatUptime(guest.uptime) : '-'}
                                   </span>
                                 </div>
                                 
                                 {/* CPU */}
-                                <div class={`p-1 px-2 ${cols.cpu}`}>
+                                <div class={`p-1 px-2 ${cols.cpu} h-full`}>
                                   <MetricBar 
                                     value={Math.round(guest.cpu * 100)} 
                                     label={`${Math.round(guest.cpu * 100)}%`}
@@ -222,7 +222,7 @@ export const VirtualizedGuestTable: Component<VirtualizedGuestTableProps> = (pro
                                 </div>
                                 
                                 {/* Memory */}
-                                <div class={`p-1 px-2 ${cols.memory}`}>
+                                <div class={`p-1 px-2 ${cols.memory} h-full`}>
                                   <MetricBar 
                                     value={guest.memory?.usage || 0} 
                                     label={`${Math.round(guest.memory?.usage || 0)}%`}
@@ -233,7 +233,7 @@ export const VirtualizedGuestTable: Component<VirtualizedGuestTableProps> = (pro
                                 </div>
                                 
                                 {/* Disk */}
-                                <div class={`p-1 px-2 ${cols.disk}`}>
+                                <div class={`p-1 px-2 ${cols.disk} h-full`}>
                                   <MetricBar 
                                     value={guest.disk.total > 0 ? Math.round((guest.disk.used / guest.disk.total) * 100) : 0} 
                                     label={`${guest.disk.total > 0 ? Math.round((guest.disk.used / guest.disk.total) * 100) : 0}%`}
@@ -244,18 +244,18 @@ export const VirtualizedGuestTable: Component<VirtualizedGuestTableProps> = (pro
                                 </div>
                                 
                                 {/* Disk I/O */}
-                                <div class={`p-1 px-2 ${cols.diskRead}`}>
+                                <div class={`p-1 px-2 ${cols.diskRead} h-full`}>
                                   <IOMetric value={guest.diskRead} disabled={!isRunning} />
                                 </div>
-                                <div class={`p-1 px-2 ${cols.diskWrite}`}>
+                                <div class={`p-1 px-2 ${cols.diskWrite} h-full`}>
                                   <IOMetric value={guest.diskWrite} disabled={!isRunning} />
                                 </div>
                                 
                                 {/* Network I/O */}
-                                <div class={`p-1 px-2 ${cols.netIn}`}>
+                                <div class={`p-1 px-2 ${cols.netIn} h-full`}>
                                   <IOMetric value={guest.networkIn} disabled={!isRunning} />
                                 </div>
-                                <div class={`p-1 px-2 ${cols.netOut}`}>
+                                <div class={`p-1 px-2 ${cols.netOut} h-full`}>
                                   <IOMetric value={guest.networkOut} disabled={!isRunning} />
                                 </div>
                               </div>

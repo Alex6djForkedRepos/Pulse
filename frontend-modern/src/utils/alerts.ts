@@ -21,7 +21,7 @@ export const getAlertStyles = (
   // Return appropriate styling based on alert severity
   if (highestSeverity === 'critical') {
     return {
-      rowClass: 'bg-red-50 dark:bg-red-950/30 border-l-4 border-red-500 dark:border-red-400',
+      rowClass: 'bg-red-50 dark:bg-red-950/30 ring-1 ring-red-400 dark:ring-red-500',
       indicatorClass: 'bg-red-500',
       badgeClass: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       hasAlert: true,
@@ -32,7 +32,7 @@ export const getAlertStyles = (
   
   if (highestSeverity === 'warning') {
     return {
-      rowClass: 'bg-yellow-50 dark:bg-yellow-950/20 border-l-4 border-yellow-500 dark:border-yellow-400',
+      rowClass: 'bg-yellow-50 dark:bg-yellow-950/20 ring-1 ring-yellow-400 dark:ring-yellow-500',
       indicatorClass: 'bg-yellow-500',
       badgeClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       hasAlert: true,

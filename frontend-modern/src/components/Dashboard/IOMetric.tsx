@@ -37,13 +37,15 @@ export function IOMetric(props: IOMetricProps) {
   });
 
   return (
-    <Show when={!props.disabled} fallback={<span class="text-sm text-gray-400">-</span>}>
-      <div class={`text-sm font-mono ${colorClass()} overflow-visible relative`} style="min-height: 24px;">
-        <AnimatedMetric 
-          value={currentValue()} 
-          formatter={(v) => formatSpeed(v, 0)}
-        />
-      </div>
-    </Show>
+    <div class="flex items-center justify-center h-full">
+      <Show when={!props.disabled} fallback={<span class="text-sm text-gray-400">-</span>}>
+        <div class={`text-xs font-mono ${colorClass()}`}>
+          <AnimatedMetric 
+            value={currentValue()} 
+            formatter={(v) => formatSpeed(v, 0)}
+          />
+        </div>
+      </Show>
+    </div>
   );
 }

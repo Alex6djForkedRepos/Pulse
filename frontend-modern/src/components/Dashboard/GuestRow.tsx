@@ -107,20 +107,17 @@ export function GuestRow(props: GuestRowProps) {
   const rowClass = createMemo(() => {
     const base = 'transition-all duration-200';
     const hover = 'hover:shadow-sm';
-    // Extract only the background color from alert styles, not the border
-    const alertBg = props.alertStyles?.hasAlert 
-      ? (props.alertStyles.severity === 'critical' 
-        ? 'bg-red-50 dark:bg-red-950/30' 
-        : 'bg-yellow-50 dark:bg-yellow-950/20')
-      : '';
+    // Use the complete rowClass from alertStyles which includes ring outline
+    const alertClass = props.alertStyles?.rowClass || '';
     const defaultHover = props.alertStyles?.hasAlert ? '' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30';
     const stoppedDimming = !isRunning() ? 'opacity-60' : '';
-    return `${base} ${hover} ${defaultHover} ${alertBg} ${stoppedDimming}`;
+    return `${base} ${hover} ${defaultHover} ${alertClass} ${stoppedDimming}`;
   });
 
-  // Get first cell styling with left border for alerts
+  // Get first cell styling - no additional border needed since row has ring
   const firstCellClass = createMemo(() => {
     const base = 'p-1 px-2 whitespace-nowrap relative';
+    // Add left accent border for alerts
     const alertBorder = props.alertStyles?.hasAlert
       ? (props.alertStyles.severity === 'critical'
         ? 'border-l-4 border-l-red-500 dark:border-l-red-400'
@@ -132,8 +129,8 @@ export function GuestRow(props: GuestRowProps) {
   return (
     <tr class={rowClass()}>
       {/* Name - Sticky column */}
-      <td class={firstCellClass()}>
-        <div class="flex items-center gap-2">
+      <td class={`${firstCellClass()} h-8`}>
+        <div class="flex items-center gap-2 h-full">
           {/* Status indicator */}
           <span class={`h-2 w-2 rounded-full flex-shrink-0 ${
             isRunning() ? 'bg-green-500' : 'bg-red-500'
@@ -167,33 +164,39 @@ export function GuestRow(props: GuestRowProps) {
       </td>
 
       {/* Type */}
-      <td class="p-1 px-2 whitespace-nowrap">
-        <span class={`inline-block px-1.5 py-0.5 text-xs font-medium rounded ${
+      <td class="p-1 px-2 whitespace-nowrap h-8">
+        <div class="flex items-center h-full">
+          <span class={`inline-block px-1.5 py-0.5 text-xs font-medium rounded ${
           props.guest.type === 'qemu' 
             ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' 
             : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
         }`}>
-          {isVM(props.guest) ? 'VM' : 'LXC'}
-        </span>
+            {isVM(props.guest) ? 'VM' : 'LXC'}
+          </span>
+        </div>
       </td>
 
       {/* VMID */}
-      <td class="p-1 px-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-        {props.guest.vmid}
+      <td class="p-1 px-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 h-8">
+        <div class="flex items-center h-full">
+          {props.guest.vmid}
+        </div>
       </td>
 
 
       {/* Uptime */}
-      <td class={`p-1 px-2 text-sm whitespace-nowrap ${
+      <td class={`p-1 px-2 text-sm whitespace-nowrap h-8 ${
         props.guest.uptime < 3600 ? 'text-orange-500' : 'text-gray-600 dark:text-gray-400'
       }`}>
-        <Show when={isRunning()} fallback="-">
-          {formatUptime(props.guest.uptime)}
-        </Show>
+        <div class="flex items-center h-full">
+          <Show when={isRunning()} fallback="-">
+            {formatUptime(props.guest.uptime)}
+          </Show>
+        </div>
       </td>
 
       {/* CPU */}
-      <td class="p-1 px-2 w-[140px]">
+      <td class="p-1 px-2 w-[140px] h-8">
         <MetricBar 
           value={cpuPercent()} 
           label={`${cpuPercent().toFixed(0)}%`}
@@ -203,7 +206,7 @@ export function GuestRow(props: GuestRowProps) {
       </td>
 
       {/* Memory */}
-      <td class="p-1 px-2 w-[140px]">
+      <td class="p-1 px-2 w-[140px] h-8">
         <MetricBar 
           value={memPercent()} 
           label={`${memPercent().toFixed(0)}%`}
@@ -213,16 +216,18 @@ export function GuestRow(props: GuestRowProps) {
       </td>
 
       {/* Disk */}
-      <td class="p-1 px-2 w-[140px]">
+      <td class="p-1 px-2 w-[140px] h-8">
         <Show 
           when={props.guest.disk && props.guest.disk.total > 0 && diskPercent() !== -1}
           fallback={
-            <span 
-              class="text-gray-400 text-sm cursor-help"
-              title={getDiskStatusTooltip()}
-            >
-              -
-            </span>
+            <div class="flex items-center justify-center h-full">
+              <span 
+                class="text-gray-400 text-sm cursor-help"
+                title={getDiskStatusTooltip()}
+              >
+                -
+              </span>
+            </div>
           }
         >
           <MetricBar 
@@ -235,18 +240,18 @@ export function GuestRow(props: GuestRowProps) {
       </td>
 
       {/* Disk I/O */}
-      <td class="p-1 px-2">
+      <td class="p-1 px-2 h-8">
         <IOMetric value={props.guest.diskRead} disabled={!isRunning()} />
       </td>
-      <td class="p-1 px-2">
+      <td class="p-1 px-2 h-8">
         <IOMetric value={props.guest.diskWrite} disabled={!isRunning()} />
       </td>
 
       {/* Network I/O */}
-      <td class="p-1 px-2">
+      <td class="p-1 px-2 h-8">
         <IOMetric value={props.guest.networkIn} disabled={!isRunning()} />
       </td>
-      <td class="p-1 px-2">
+      <td class="p-1 px-2 h-8">
         <IOMetric value={props.guest.networkOut} disabled={!isRunning()} />
       </td>
 
