@@ -69,10 +69,16 @@ function App() {
     savedTab && ['main', 'storage', 'backups', 'alerts', 'settings'].includes(savedTab) ? savedTab : 'main'
   );
   
-  // Persist tab selection
+  // Track which tabs have been visited to lazy load them
+  const [visitedTabs, setVisitedTabs] = createSignal<Set<TabType>>(new Set([activeTab()]));
+  
+  // Persist tab selection and track visited tabs
   const changeTab = (tab: TabType) => {
     setActiveTab(tab);
     localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, tab);
+    
+    // Mark tab as visited for lazy loading
+    setVisitedTabs(prev => new Set([...prev, tab]));
   };
   
   // Version info
@@ -559,32 +565,43 @@ function App() {
             </div>
           </div>
           
-          {/* Main Content */}
+          {/* Main Content - Lazy load tabs but keep them alive once loaded */}
           <main id="main" class="tab-content block bg-white dark:bg-gray-800 rounded-b rounded-tr shadow mb-2">
             <div class="p-3">
-            <Show when={activeTab() === 'main'}>
-              <Dashboard 
-                vms={state().vms} 
-                containers={state().containers}
-                nodes={state().nodes}
-              />
-            </Show>
-            
-            <Show when={activeTab() === 'storage'}>
-              <StorageComponent />
-            </Show>
-            
-            <Show when={activeTab() === 'backups'}>
-              <Backups />
-            </Show>
-            
-            <Show when={activeTab() === 'alerts'}>
-              <Alerts />
-            </Show>
-            
-            <Show when={activeTab() === 'settings'}>
-              <Settings />
-            </Show>
+              {/* Only mount components once they've been visited, then keep them alive */}
+              <Show when={visitedTabs().has('main')}>
+                <div style={{ display: activeTab() === 'main' ? 'block' : 'none' }}>
+                  <Dashboard 
+                    vms={state().vms} 
+                    containers={state().containers}
+                    nodes={state().nodes}
+                  />
+                </div>
+              </Show>
+              
+              <Show when={visitedTabs().has('storage')}>
+                <div style={{ display: activeTab() === 'storage' ? 'block' : 'none' }}>
+                  <StorageComponent />
+                </div>
+              </Show>
+              
+              <Show when={visitedTabs().has('backups')}>
+                <div style={{ display: activeTab() === 'backups' ? 'block' : 'none' }}>
+                  <Backups />
+                </div>
+              </Show>
+              
+              <Show when={visitedTabs().has('alerts')}>
+                <div style={{ display: activeTab() === 'alerts' ? 'block' : 'none' }}>
+                  <Alerts />
+                </div>
+              </Show>
+              
+              <Show when={visitedTabs().has('settings')}>
+                <div style={{ display: activeTab() === 'settings' ? 'block' : 'none' }}>
+                  <Settings />
+                </div>
+              </Show>
             </div>
           </main>
           

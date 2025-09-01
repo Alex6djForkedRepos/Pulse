@@ -7,6 +7,7 @@ import type { Storage as StorageType } from '@/types/api';
 import { ComponentErrorBoundary } from '@/components/ErrorBoundary';
 import { UnifiedNodeSelector } from '@/components/shared/UnifiedNodeSelector';
 import { StorageFilter } from './StorageFilter';
+import { VirtualizedStorage } from './VirtualizedStorage';
 
 
 const Storage: Component = () => {
@@ -237,138 +238,12 @@ const Storage: Component = () => {
       {/* Storage Table - shows for both PVE and PBS storage */}
       <Show when={connected() && initialDataReceived() && sortedStorage().length > 0}>
         <ComponentErrorBoundary name="Storage Table">
-          <div class="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div class="overflow-x-auto" style="scrollbar-width: none; -ms-overflow-style: none;">
-              <style>{`
-                .overflow-x-auto::-webkit-scrollbar { display: none; }
-              `}</style>
-            <table class="w-full">
-              <thead>
-                <tr class="bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
-                  <th class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider">Storage</th>
-                  <Show when={viewMode() === 'node'}>
-                    <th class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider hidden sm:table-cell">Node</th>
-                  </Show>
-                  <th class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider hidden md:table-cell">Type</th>
-                  <th class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider hidden lg:table-cell">Content</th>
-                  <th class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider hidden sm:table-cell">Status</th>
-                  <Show when={viewMode() === 'node'}>
-                    <th class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider hidden lg:table-cell">Shared</th>
-                  </Show>
-                  <th class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider min-w-[200px]">Usage</th>
-                  <th class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider hidden sm:table-cell">Free</th>
-                  <th class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider">Total</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                <For each={Object.entries(groupedStorage()).sort(([a], [b]) => a.localeCompare(b))}>
-                  {([groupName, storages]) => (
-                    <>
-                      {/* Group Header */}
-                      <Show when={viewMode() === 'node'}>
-                        <tr class="bg-gray-50/50 dark:bg-gray-700/30">
-                          <td class="p-0.5 px-1.5 text-xs font-medium text-gray-600 dark:text-gray-400" colspan="9">
-                            <a 
-                              href={nodeHostMap()[groupName] || (groupName.includes(':') ? `https://${groupName}` : `https://${groupName}:8006`)} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150 cursor-pointer"
-                              title={`Open ${groupName} web interface`}
-                            >
-                              {groupName}
-                            </a>
-                          </td>
-                        </tr>
-                      </Show>
-                      
-                      {/* Storage Rows */}
-                      <For each={storages} fallback={<></>}>
-                        {(storage) => {
-                          const usagePercent = storage.total > 0 ? (storage.used / storage.total * 100) : 0;
-                          const isDisabled = storage.status !== 'available';
-                          
-                          const alertStyles = getAlertStyles(storage.id || `${storage.instance}-${storage.name}`, activeAlerts);
-                          const alertBg = alertStyles.hasAlert 
-                            ? (alertStyles.severity === 'critical' 
-                              ? 'bg-red-50 dark:bg-red-950/30' 
-                              : 'bg-yellow-50 dark:bg-yellow-950/20')
-                            : '';
-                          const rowClass = `${isDisabled ? 'opacity-60' : ''} ${alertBg} hover:shadow-sm transition-all duration-200`;
-                          
-                          const firstCellClass = alertStyles.hasAlert
-                            ? (alertStyles.severity === 'critical'
-                              ? 'p-0.5 px-1.5 border-l-4 border-l-red-500 dark:border-l-red-400'
-                              : 'p-0.5 px-1.5 border-l-4 border-l-yellow-500 dark:border-l-yellow-400')
-                            : 'p-0.5 px-1.5';
-                          
-                          return (
-                            <tr class={`${rowClass} hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors`}>
-                              <td class={firstCellClass}>
-                                <div class="flex items-center gap-2">
-                                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                    {storage.name}
-                                  </span>
-                                </div>
-                              </td>
-                              <Show when={viewMode() === 'node'}>
-                                <td class="p-0.5 px-1.5 hidden sm:table-cell">
-                                  <span class="text-xs font-medium text-gray-900 dark:text-gray-100">
-                                    {storage.node}
-                                  </span>
-                                </td>
-                              </Show>
-                              <td class="p-0.5 px-1.5 hidden md:table-cell">
-                                <span class="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                                  {storage.type}
-                                </span>
-                              </td>
-                              <td class="p-0.5 px-1.5 hidden lg:table-cell">
-                                <span class="text-xs text-gray-600 dark:text-gray-400">
-                                  {storage.content || '-'}
-                                </span>
-                              </td>
-                              <td class="p-0.5 px-1.5 text-xs hidden sm:table-cell">
-                                <span class={`${
-                                  storage.status === 'available' ? 'text-green-600 dark:text-green-400' : 
-                                  'text-red-600 dark:text-red-400'
-                                }`}>
-                                  {storage.status || 'unknown'}
-                                </span>
-                              </td>
-                              <Show when={viewMode() === 'node'}>
-                                <td class="p-0.5 px-1.5 hidden lg:table-cell">
-                                  <span class="text-xs text-gray-600 dark:text-gray-400">
-                                    {storage.shared ? '✓' : '-'}
-                                  </span>
-                                </td>
-                              </Show>
-                              
-                              <td class="p-0.5 px-1.5">
-                                <div class="relative min-w-[200px] h-3.5 rounded overflow-hidden bg-gray-200 dark:bg-gray-600">
-                                  <div 
-                                    class={`absolute top-0 left-0 h-full ${getProgressBarColor(usagePercent)}`}
-                                    style={{ width: `${usagePercent}%` }}
-                                  />
-                                  <span class="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-gray-800 dark:text-gray-100 leading-none">
-                                    <span class="whitespace-nowrap px-0.5">
-                                      {usagePercent.toFixed(0)}% ({formatBytes(storage.used || 0)}/{formatBytes(storage.total || 0)})
-                                    </span>
-                                  </span>
-                                </div>
-                              </td>
-                              <td class="p-0.5 px-1.5 text-xs hidden sm:table-cell">{formatBytes(storage.free || 0)}</td>
-                              <td class="p-0.5 px-1.5 text-xs">{formatBytes(storage.total || 0)}</td>
-                            </tr>
-                          );
-                        }}
-                      </For>
-                    </>
-                  )}
-                </For>
-              </tbody>
-            </table>
-            </div>
-          </div>
+          <VirtualizedStorage
+            storage={sortedStorage()}
+            viewMode={viewMode()}
+            activeAlerts={activeAlerts}
+            nodeHostMap={nodeHostMap()}
+          />
         </ComponentErrorBoundary>
       </Show>
       

@@ -6,6 +6,7 @@ import { parseFilterStack, evaluateFilterStack } from '@/utils/searchQuery';
 import { UnifiedNodeSelector } from '@/components/shared/UnifiedNodeSelector';
 import { MetricBar } from '@/components/Dashboard/MetricBar';
 import { BackupsFilter } from './BackupsFilter';
+import { VirtualizedBackupsTable } from './VirtualizedBackupsTable';
 
 type BackupType = 'snapshot' | 'local' | 'remote';
 type GuestType = 'VM' | 'LXC' | 'Host' | 'Template' | 'ISO';
@@ -136,17 +137,25 @@ const UnifiedBackups: Component = () => {
     // Debug mode - remove in production
     const debugMode = false;
 
+    // Create lookup maps for efficient guest name resolution
+    const vmLookup = new Map<string, string>();
+    const ctLookup = new Map<string, string>();
+    
+    state.vms?.forEach(vm => {
+      const key = `${vm.node}-${vm.vmid}`;
+      vmLookup.set(key, vm.name || '');
+    });
+    
+    state.containers?.forEach(ct => {
+      const key = `${ct.node}-${ct.vmid}`;
+      ctLookup.set(key, ct.name || '');
+    });
+
     // Normalize snapshots
     state.pveBackups?.guestSnapshots?.forEach((snapshot) => {
-      // Try to find the guest name by matching VMID
-      let guestName = '';
-      const vm = state.vms?.find(v => v.vmid === snapshot.vmid && v.node === snapshot.node);
-      const ct = state.containers?.find(c => c.vmid === snapshot.vmid && c.node === snapshot.node);
-      if (vm) {
-        guestName = vm.name || '';
-      } else if (ct) {
-        guestName = ct.name || '';
-      }
+      // Try to find the guest name by matching VMID - now O(1) lookup
+      const lookupKey = `${snapshot.node}-${snapshot.vmid}`;
+      const guestName = vmLookup.get(lookupKey) || ctLookup.get(lookupKey) || '';
       
       unified.push({
         backupType: 'snapshot',
@@ -1615,267 +1624,23 @@ const UnifiedBackups: Component = () => {
           </div>
           
           {/* Desktop Table View */}
-          <table class="backup-table hidden lg:table">
-            <thead>
-              <tr class="bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
-                <th
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('vmid')}
-                  style="width: 60px;"
-                >
-                  VMID {sortKey() === 'vmid' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('type')}
-                  style="width: 60px;"
-                >
-                  Type {sortKey() === 'type' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('name')}
-                  style="width: 150px;"
-                >
-                  Name {sortKey() === 'name' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('node')}
-                  style="width: 100px;"
-                >
-                  Node {sortKey() === 'node' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <Show when={backupTypeFilter() === 'all' || backupTypeFilter() === 'remote'}>
-                  <th
-                    class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                    onClick={() => handleSort('owner')}
-                    style="width: 80px;"
-                  >
-                    Owner {sortKey() === 'owner' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                  </th>
-                </Show>
-                <th
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('backupTime')}
-                  style="width: 140px;"
-                >
-                  Time {sortKey() === 'backupTime' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <Show when={backupTypeFilter() !== 'snapshot'}>
-                  <th
-                    class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                    onClick={() => handleSort('size')}
-                    style="width: 80px;"
-                  >
-                    Size {sortKey() === 'size' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                  </th>
-                </Show>
-                <th
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('backupType')}
-                  style="width: 80px;"
-                >
-                  Backup {sortKey() === 'backupType' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <Show when={backupTypeFilter() !== 'snapshot'}>
-                  <th 
-                    class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                    onClick={() => handleSort('storage')}
-                    style="width: 150px;"
-                  >
-                    Location {sortKey() === 'storage' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                  </th>
-                </Show>
-                <Show when={backupTypeFilter() === 'all' || backupTypeFilter() === 'remote'}>
-                  <th 
-                    class="px-2 py-1.5 text-center text-[11px] sm:text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                    onClick={() => handleSort('verified')}
-                    style="width: 60px;"
-                  >
-                    Verified {sortKey() === 'verified' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                  </th>
-                </Show>
-                <th class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider" style="width: 200px;">
-                  Details
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              <For each={groupedData()}>
-                {(group) => (
-                  <>
-                    <tr class="bg-gray-50/50 dark:bg-gray-700/30">
-                      <td colspan={(() => {
-                        let cols = 7; // Base columns: VMID, Type, Name, Node, Time, Backup, Details
-                        if (backupTypeFilter() === 'all' || backupTypeFilter() === 'remote') cols++; // Add Owner column
-                        if (backupTypeFilter() !== 'snapshot') cols++; // Add Size column
-                        if (backupTypeFilter() === 'all' || backupTypeFilter() === 'remote') cols++; // Add Verified column
-                        if (backupTypeFilter() !== 'snapshot') cols++; // Add Location column
-                        return cols;
-                      })()} class="p-0.5 px-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        {group.label} ({group.items.length})
-                      </td>
-                    </tr>
-                    <For each={group.items}>
-                      {(item) => (
-                        <tr class="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                          <td class="p-0.5 px-1.5 text-sm align-middle">{item.vmid}</td>
-                          <td class="p-0.5 px-1.5 align-middle">
-                            <span class={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                              item.type === 'VM'
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                                : item.type === 'Host'
-                                ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300'
-                                : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
-                            }`}>
-                              {item.type}
-                            </span>
-                          </td>
-                          <td class="p-0.5 px-1.5 text-sm align-middle">
-                            {item.name || '-'}
-                          </td>
-                          <td class="p-0.5 px-1.5 text-sm align-middle">
-                            {item.node}
-                          </td>
-                          <Show when={backupTypeFilter() === 'all' || backupTypeFilter() === 'remote'}>
-                            <td class="p-0.5 px-1.5 text-xs align-middle text-gray-500 dark:text-gray-400">
-                              {item.owner ? item.owner.split('@')[0] : '-'}
-                            </td>
-                          </Show>
-                          <td class={`p-0.5 px-1.5 text-xs align-middle ${getAgeColorClass(item.backupTime)}`}>
-                            {formatTime(item.backupTime * 1000)}
-                          </td>
-                          <Show when={backupTypeFilter() !== 'snapshot'}>
-                            <td class={`p-0.5 px-1.5 align-middle ${getSizeColor(item.size)}`}>
-                              {item.size ? formatBytes(item.size) : '-'}
-                            </td>
-                          </Show>
-                          <td class="p-0.5 px-1.5 align-middle">
-                            <div class="flex items-center gap-1">
-                              <span class={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                                item.backupType === 'snapshot'
-                                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300'
-                                  : item.backupType === 'local'
-                                  ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300'
-                                  : 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
-                              }`}>
-                                {item.backupType === 'snapshot' ? 'Snapshot' : item.backupType === 'local' ? 'PVE' : 'PBS'}
-                              </span>
-                              <Show when={item.encrypted}>
-                                <span title="Encrypted backup" class="text-green-600 dark:text-green-400 inline-block ml-1">
-                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-                                  </svg>
-                                </span>
-                              </Show>
-                              <Show when={item.protected}>
-                                <span title="Protected backup" class="text-blue-600 dark:text-blue-400 inline-block ml-1">
-                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                  </svg>
-                                </span>
-                              </Show>
-                            </div>
-                          </td>
-                          <Show when={backupTypeFilter() !== 'snapshot'}>
-                            <td class="p-0.5 px-1.5 text-sm align-middle">
-                              {item.storage || (item.datastore && (
-                                item.namespace && item.namespace !== 'root'
-                                  ? `${item.datastore}/${item.namespace}`
-                                  : item.datastore
-                              )) || '-'}
-                            </td>
-                          </Show>
-                          <Show when={backupTypeFilter() === 'all' || backupTypeFilter() === 'remote'}>
-                            <td class="p-0.5 px-1.5 text-center align-middle">
-                              {item.backupType === 'remote' ? (
-                                item.verified ? (
-                                  <span title="PBS backup verified">
-                                    <svg class="w-4 h-4 text-green-500 dark:text-green-400 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  </span>
-                                ) : (
-                                  <span title="PBS backup not yet verified">
-                                    <svg class="w-4 h-4 text-gray-400 dark:text-gray-500 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                  </span>
-                                )
-                              ) : (
-                                <span class="text-gray-400 dark:text-gray-500" title="Verification only available for PBS backups">-</span>
-                              )}
-                            </td>
-                          </Show>
-                          <td 
-                            class="p-0.5 px-1.5 cursor-help align-middle"
-                            onMouseEnter={(e) => {
-                              const details = [];
-                              
-                              if (item.backupType === 'snapshot') {
-                                details.push(item.backupName);
-                                if (item.description) {
-                                  details.push(item.description);
-                                }
-                              } else if (item.backupType === 'local') {
-                                details.push(item.backupName);
-                              } else if (item.backupType === 'remote') {
-                                if (item.protected) details.push('Protected');
-                                // For PBS backups, show the notes field which contains the backup description
-                                const pbsDescription = item.description || (item.name && item.name !== '-' ? item.name : '');
-                                if (pbsDescription && pbsDescription.trim()) {
-                                  details.push(pbsDescription);
-                                }
-                              }
-                              
-                              const fullText = details.join(' • ') || '-';
-                              if (fullText.length > 35) {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setTooltip({
-                                  text: fullText,
-                                  x: rect.left,
-                                  y: rect.top - 5
-                                });
-                              }
-                            }}
-                            onMouseLeave={() => {
-                              setTooltip(null);
-                            }}
-                          >
-                            {(() => {
-                              const details = [];
-                              
-                              if (item.backupType === 'snapshot') {
-                                details.push(item.backupName);
-                                if (item.description) {
-                                  details.push(item.description);
-                                }
-                              } else if (item.backupType === 'local') {
-                                details.push(truncateMiddle(item.backupName, 30));
-                              } else if (item.backupType === 'remote') {
-                                if (item.protected) details.push('Protected');
-                                // For PBS backups, show the notes field which contains the backup description
-                                const pbsDescription = item.description || (item.name && item.name !== '-' ? item.name : '');
-                                if (pbsDescription && pbsDescription.trim()) {
-                                  details.push(pbsDescription);
-                                }
-                              }
-                              
-                              const fullText = details.join(' • ') || '-';
-                              const displayText = fullText.length > 35 ? fullText.substring(0, 32) + '...' : fullText;
-                              
-                              return displayText;
-                            })()}
-                          </td>
-                        </tr>
-                      )}
-                    </For>
-                  </>
-                )}
-              </For>
-            </tbody>
-          </table>
+          <div class="hidden lg:block">
+            <VirtualizedBackupsTable
+              backups={filteredData()}
+              groupByMode={groupByMode()}
+              useRelativeTime={useRelativeTime()}
+              sortKey={sortKey()}
+              sortDirection={sortDirection()}
+              onSort={handleSort}
+              hasHostBackups={hasHostBackups()}
+              backupTypeFilter={backupTypeFilter()}
+              formatTime={formatTime}
+              getAgeColorClass={getAgeColorClass}
+              getSizeColor={getSizeColor}
+              truncateMiddle={truncateMiddle}
+              setTooltip={setTooltip}
+            />
+          </div>
           </Show>
         </Show>
         </div>

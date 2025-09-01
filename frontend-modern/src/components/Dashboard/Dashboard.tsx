@@ -1,15 +1,12 @@
-import { createSignal, createMemo, createEffect, For, Show } from 'solid-js';
+import { createSignal, createMemo, createEffect, Show } from 'solid-js';
 import type { VM, Container, Node } from '@/types/api';
-import { GuestRow } from './GuestRow';
+import { VirtualizedGuestTable } from './VirtualizedGuestTable';
 import { useWebSocket } from '@/App';
 import { getAlertStyles } from '@/utils/alerts';
 import { createTooltipSystem } from '@/components/shared/Tooltip';
 import { ComponentErrorBoundary } from '@/components/ErrorBoundary';
-import { ScrollableTable } from '@/components/shared/ScrollableTable';
 import { parseFilterStack, evaluateFilterStack } from '@/utils/searchQuery';
 import { UnifiedNodeSelector } from '@/components/shared/UnifiedNodeSelector';
-import { MetricBar } from './MetricBar';
-import { formatBytes, formatUptime } from '@/utils/format';
 import { DashboardFilter } from './DashboardFilter';
 
 interface DashboardProps {
@@ -72,7 +69,7 @@ export function Dashboard(props: DashboardProps) {
   );
   
   // Sorting state - default to VMID ascending (matches Proxmox order)
-  const [sortKey, setSortKey] = createSignal<keyof (VM | Container) | null>('vmid');
+  const [sortKey, setSortKey] = createSignal<string | null>('vmid');
   const [sortDirection, setSortDirection] = createSignal<'asc' | 'desc'>('asc');
   
   // Create tooltip system
@@ -112,7 +109,7 @@ export function Dashboard(props: DashboardProps) {
   
 
   // Sort handler
-  const handleSort = (key: keyof (VM | Container)) => {
+  const handleSort = (key: string) => {
     if (sortKey() === key) {
       // Toggle direction for the same column
       setSortDirection(sortDirection() === 'asc' ? 'desc' : 'asc');
@@ -278,8 +275,8 @@ export function Dashboard(props: DashboardProps) {
       const dir = sortDirection();
       if (key) {
         groups[''] = groups[''].sort((a, b) => {
-          let aVal: string | number | boolean | null | undefined = a[key] as string | number | boolean | null | undefined;
-          let bVal: string | number | boolean | null | undefined = b[key] as string | number | boolean | null | undefined;
+          let aVal: string | number | boolean | null | undefined = (a as any)[key] as string | number | boolean | null | undefined;
+          let bVal: string | number | boolean | null | undefined = (b as any)[key] as string | number | boolean | null | undefined;
           
           // Special handling for percentage-based columns
           if (key === 'cpu') {
@@ -338,8 +335,8 @@ export function Dashboard(props: DashboardProps) {
     if (key) {
       Object.keys(groups).forEach(node => {
         groups[node] = groups[node].sort((a, b) => {
-          let aVal: string | number | boolean | null | undefined = a[key] as string | number | boolean | null | undefined;
-          let bVal: string | number | boolean | null | undefined = b[key] as string | number | boolean | null | undefined;
+          let aVal: string | number | boolean | null | undefined = (a as any)[key] as string | number | boolean | null | undefined;
+          let bVal: string | number | boolean | null | undefined = (b as any)[key] as string | number | boolean | null | undefined;
           
           // Special handling for percentage-based columns
           if (key === 'cpu') {
@@ -673,132 +670,21 @@ export function Dashboard(props: DashboardProps) {
         </div>
       </Show>
 
-      {/* Table View */}
+      {/* Table View - Always use virtualized table for consistency and performance */}
       <Show when={connected() && initialDataReceived() && filteredGuests().length > 0}>
-        <ComponentErrorBoundary name="Guest Table">
-          <ScrollableTable 
-            class="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
-            minWidth="900px"
-          >
-          <table class="w-full min-w-[900px] table-fixed">
-            <thead>
-              <tr class="bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[200px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-                  onClick={() => handleSort('name')}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSort('name')}
-                  tabindex="0"
-                  role="button"
-                  aria-label={`Sort by name ${sortKey() === 'name' ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : ''}`}
-                >
-                  Name {sortKey() === 'name' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[60px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('type')}
-                >
-                  Type {sortKey() === 'type' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[70px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('vmid')}
-                >
-                  VMID {sortKey() === 'vmid' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[100px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('uptime')}
-                >
-                  Uptime {sortKey() === 'uptime' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[140px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('cpu')}
-                >
-                  CPU {sortKey() === 'cpu' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[140px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('memory')}
-                >
-                  Memory {sortKey() === 'memory' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[140px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('disk')}
-                >
-                  Disk {sortKey() === 'disk' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[90px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('diskRead')}
-                >
-                  Disk Read {sortKey() === 'diskRead' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[90px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('diskWrite')}
-                >
-                  Disk Write {sortKey() === 'diskWrite' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[90px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('networkIn')}
-                >
-                  Net In {sortKey() === 'networkIn' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-                <th 
-                  class="px-2 py-1.5 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider w-[90px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('networkOut')}
-                >
-                  Net Out {sortKey() === 'networkOut' && (sortDirection() === 'asc' ? '▲' : '▼')}
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              <For each={Object.entries(groupedGuests()).sort(([a], [b]) => a.localeCompare(b))} fallback={<></>}>
-                {([node, guests]) => (
-                  <>
-                    <Show when={node && groupingMode() === 'grouped'}>
-                      <tr class="bg-gray-50/50 dark:bg-gray-700/30">
-                        <td class="p-1 px-2 text-xs font-medium text-gray-600 dark:text-gray-400 w-[200px]">
-                          <a 
-                            href={nodeHostMap()[node] || (node.includes(':') ? `https://${node}` : `https://${node}:8006`)} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150 cursor-pointer"
-                            title={`Open ${node} web interface`}
-                          >
-                            {node}
-                          </a>
-                        </td>
-                        <td colspan="10" class="p-1 px-2"></td>
-                      </tr>
-                    </Show>
-                    <For each={guests} fallback={<></>}>
-                      {(guest) => (
-                        <ComponentErrorBoundary name="GuestRow">
-                          {(() => {
-                            const guestId = guest.id || `${guest.instance}-${guest.name}-${guest.vmid}`;
-                            return (
-                              <GuestRow 
-                                guest={guest} 
-                                alertStyles={getAlertStyles(guestId, activeAlerts)}
-                                onTagClick={handleTagClick}
-                                activeSearch={search()}
-                              />
-                            );
-                          })()}
-                        </ComponentErrorBoundary>
-                      )}
-                    </For>
-                  </>
-                )}
-              </For>
-            </tbody>
-          </table>
-        </ScrollableTable>
-        </ComponentErrorBoundary>
+        <VirtualizedGuestTable
+          guests={filteredGuests()}
+          groupedGuests={groupedGuests()}
+          groupingMode={groupingMode()}
+          sortKey={sortKey()}
+          sortDirection={sortDirection()}
+          activeAlerts={activeAlerts}
+          getAlertStyles={getAlertStyles}
+          handleTagClick={handleTagClick}
+          handleSort={handleSort}
+          search={search()}
+          nodeHostMap={nodeHostMap()}
+        />
       </Show>
 
       <Show when={connected() && initialDataReceived() && filteredGuests().length === 0 && (props.vms.length > 0 || props.containers.length > 0)}>
